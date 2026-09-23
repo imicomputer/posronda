@@ -120,3 +120,11 @@ export function clearHistory(db) {
     }
   });
 }
+
+/** Erase everything this browser remembers (the "log out" menu item):
+ *  stored username + stored history. Tolerates a missing history DB
+ *  (e.g. private mode): the username is still cleared. */
+export async function wipeLocalData(storage = globalThis.localStorage, db = null) {
+  clearStoredUsername(storage);
+  if (db) await clearHistory(db).catch(() => {});
+}
