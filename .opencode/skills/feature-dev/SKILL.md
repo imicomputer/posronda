@@ -1,13 +1,13 @@
 ---
 name: feature-dev
-description: Develop a new feature end-to-end in the PosRonda chat repo. Use when the user asks to add a feature, change behavior, fix a bug, or says "implement", "build", "add". Covers analyze, design, branch, code, test, commit, push, and pull request.
+description: Develop a new feature end-to-end in the PosRonda chat repo with docs-first TDD. Use when the user asks to add a feature, change behavior, fix a bug, or says "implement", "build", "add", "documentation", "test-first", "TDD". Pipeline: analyze, document, design, write failing tests, code to green, review, retest, pull request.
 ---
 
-# Feature Dev — analyze → design → code → test → PR
+# Feature Dev — analyze → document → design → test (red) → code (green) → review → retest → PR
 
-You own the whole task. Work through every phase in order; do not skip testing
-or the pull request. Keep changes minimal and in this repo's simple style
-(see AGENTS.md).
+You own the whole task. Phases run strictly in order — never write code
+before the doc, never write implementation before its failing test. Keep
+changes minimal and in this repo's simple style (see AGENTS.md).
 
 ## 0. Prerequisites
 
@@ -21,59 +21,86 @@ or the pull request. Keep changes minimal and in this repo's simple style
 
 - Read the files the request touches: `server.js` (relay + static hosting),
   `src/App.svelte` (UI), `lib/protocol.js` (shared validation — wire contract),
-  `src/lib/ui.js` (pure UI helpers), `test/*.test.js` (existing coverage).
+  `src/lib/ui.js` (pure UI helpers), `src/lib/store.js` (browser persistence),
+  `test/*.test.js` (existing coverage).
 - State back in one or two sentences what you understood, plus which files
   will change and which tests cover them.
 
-## 2. Design
+## 2. Document (first artifact — before any design or code)
 
-- Write a short plan (max 5 bullets): approach, wire-protocol impact
-  (`join`/`chat`/`system`/`users`/`error` message shapes), UI impact.
+- Write `docs/features/<short-slug>.md` covering: what + why (2–3 sentences),
+  user-visible behavior / UX flow, wire-protocol impact (`join`/`chat`/`system`/
+  `users`/`error` shapes), storage impact (server must stay storage-free;
+  browser storage goes in `src/lib/store.js`), and acceptance criteria as a
+  checkbox list.
+- Update the user-facing `README.md` section for the feature (short).
+- If the design (next phase) changes any of this, update the doc first —
+  the doc is the spec, code follows it, not the reverse.
+
+## 3. Design
+
+- Derive a short technical plan (max 5 bullets) from the doc: approach, files,
+  protocol/UI impact, test strategy (which new cases go in
+  `test/protocol.test.js` / `test/ui.test.js` / `test/store.test.js` /
+  `test/server.test.js`).
 - Hard invariants — never break these without explicit user approval:
-  1. Messages are relayed only, never stored server-side.
-  2. Single room, unique usernames (case-insensitive).
+  1. Messages are relayed only — never stored server-side.
+  2. One room, unique usernames, case-insensitive duplicate rejection.
   3. One container serves UI + WS (`/` and `/ws`); Coolify deploys the Dockerfile.
-- If the request is ambiguous, ask the user with the question tool before coding.
+- If the request is ambiguous, ask the user with the question tool before
+  writing any test or code.
 
-## 3. Branch
+## 4. Branch
 
 ```bash
 git checkout main && git pull --ff-only
 git checkout -b feat/<short-slug>   # or fix/<short-slug> for bugfixes
 ```
 
-## 4. Code
+## 5. Tests first (RED)
 
-- Shared logic goes in `lib/protocol.js` or `src/lib/ui.js` first (both are
-  unit-tested); `server.js` and `App.svelte` stay thin.
-- If `lib/protocol.js` changes, update `test/protocol.test.js` and check the
-  Svelte client still matches the wire contract.
+- Write the failing tests before any implementation: pure helpers in
+  `test/protocol.test.js` / `test/ui.test.js` / `test/store.test.js`
+  (inject fakes, never real browser APIs), wire behavior in
+  `test/server.test.js` (queued-listener pattern, no hangs).
+- Run `npm test` and confirm the new tests FAIL for the right reason
+  (missing behavior, not typos). A test that passes before the code exists
+  is a bad test — rewrite it.
 
-## 5. Test (all three, every time)
+## 6. Code (GREEN)
 
-```bash
-npm test          # 19+ tests: node:test unit + live relay integration
-npm run build     # Svelte/Vite production build must succeed
-```
+- Write the minimal implementation that turns the new tests green: shared
+  logic in `lib/protocol.js` / `src/lib/ui.js` / `src/lib/store.js` first;
+  `server.js` and `App.svelte` stay thin.
+- If the code needs something the doc forbids (or vice versa), stop: update
+  `docs/features/<short-slug>.md` first, then continue.
+- `npm run build` must succeed (Svelte/Vite production build).
 
-- Add tests for the new behavior: pure helpers in `test/protocol.test.js` /
-  `test/ui.test.js`, wire behavior in `test/server.test.js`.
-- If anything fails, fix and re-run until green. Never hand a red suite to the user.
+## 7. Review
 
-## 6. Commit + push
+- Run the `code-review` skill against your branch and fix every blocking
+  finding (same invariants checklist, plus: doc matches implementation,
+  every new behavior has a test).
 
-- Stage only intended files (`git status`, `git diff` to verify).
+## 8. Retest
+
+- After review fixes: full `npm test` (all green) + `npm run build` again.
+- If fixes were non-trivial, re-run the `code-review` skill once more.
+  Loop review → retest until both are clean. Never hand a red suite to the user.
+
+## 9. Commit + push + pull request
+
+- Stage only intended files — including the feature doc (`git status`,
+  `git diff` to verify).
 - Conventional message: `feat: ...` / `fix: ...` with a one-line body if needed.
-- `git push -u origin feat/<short-slug>`
-
-## 7. Pull request
+- `git push -u origin feat/<short-slug>`, then:
 
 ```bash
-gh pr create --fill --title "feat: <what>" --body "- What/why
-- How tested: npm test (N passing), npm run build OK
+gh pr create --fill --title "feat: <what>" --body "- What/why (link docs/features/<slug>.md)
+- Tests: new cases in <files>, npm test (N passing), npm run build OK
+- Review: code-review clean
 - Screenshots for UI changes"
 ```
 
-- Then run the `code-review` skill on your own PR, fix findings, and report
-  the PR URL + review result to the user. Do NOT merge without the user
-  saying so.
+- Report the PR URL + review result to the user. Do NOT merge without the
+  user saying so.

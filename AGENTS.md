@@ -30,7 +30,8 @@ Simple single-room WebSocket chat. Svelte UI + Node `ws` relay. Keep it simple.
 
 ## Workflow
 
-Skills in `.opencode/skills/` own the process: `feature-dev` (full pipeline),
+Skills in `.opencode/skills/` own the process: `feature-dev` (docs-first TDD:
+doc → design → failing tests → code → review → retest → PR),
 `code-review` (PR verdicts), `release` (version → tag → deploy). Slash
 shortcuts: `/feature`, `/review`, `/release`. Conventional commits
 (`feat:`, `fix:`, `chore(release):`). Never merge without being asked.
