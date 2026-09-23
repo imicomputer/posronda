@@ -16,6 +16,8 @@ Simple single-room WebSocket chat. Svelte UI + Node `ws` relay. Keep it simple.
 - `lib/protocol.js` — shared validation + wire-contract helpers, used by BOTH
   server and client. Changing it changes the contract: update client + tests together.
 - `src/App.svelte` — whole UI in one component. Pure helpers live in `src/lib/ui.js`.
+- `src/lib/store.js` — client persistence only: username in localStorage,
+  last 200 messages in IndexedDB. Backends injectable for tests. Server stays storage-free.
 - `test/` — `protocol.test.js` + `ui.test.js` (pure units), `server.test.js`
   (boots real server on an ephemeral port, queued-listener pattern, no hangs).
 - `Dockerfile` — single container serves UI + WS. Coolify deploys it, port 3000.

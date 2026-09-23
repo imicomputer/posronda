@@ -3,6 +3,10 @@
   import Swal from 'sweetalert2';
   import { validUsername, sanitizeChat } from '../lib/protocol.js';
   import { colorOf, fmtTime as time } from './lib/ui.js';
+  import {
+    getStoredUsername, setStoredUsername,
+    openHistoryDB, loadHistory, saveMessage, clearHistory
+  } from './lib/store.js';
 
   let ws;
   let me = '';
@@ -11,6 +15,7 @@
   let messages = []; // { kind: 'chat'|'system', username, text, time, mine }
   let draft = '';
   let box; // scroll container
+  let historyDb = null; // IndexedDB handle; null when storage unavailable
 
   const wsUrl = () =>
     `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
@@ -25,7 +30,7 @@
     const url = location.port === '5173' ? 'ws://localhost:3000/ws' : wsUrl();
     ws = new WebSocket(url);
 
-    ws.onopen = () => { connected = true; askName(); };
+    ws.onopen = () => { connected = true; autoJoin(); };
     ws.onclose = () => {
       connected = false;
       messages = [...messages, { kind: 'system', text: 'Disconnected — retrying…' }];
@@ -35,14 +40,20 @@
       const m = JSON.parse(e.data);
       if (m.type === 'joined') {
         me = m.username;
+        setStoredUsername(me);
+        refreshMine();
         Swal.close();
       } else if (m.type === 'error' && !me) {
         askName(m.message); // name taken / invalid → ask again
       } else if (m.type === 'chat') {
-        messages = [...messages, { kind: 'chat', ...m, mine: m.username === me }];
+        const msg = { kind: 'chat', ...m, mine: m.username === me };
+        messages = [...messages, msg];
+        persist(msg);
         scrollDown();
       } else if (m.type === 'system') {
-        messages = [...messages, { kind: 'system', text: m.text }];
+        const msg = { kind: 'system', text: m.text };
+        messages = [...messages, msg];
+        persist(msg);
         scrollDown();
       } else if (m.type === 'users') {
         users = m.users;
@@ -73,7 +84,48 @@
     draft = '';
   }
 
-  onMount(connect);
+  // --- Local persistence (server stores nothing) ---
+
+  function persist(msg) {
+    if (historyDb) saveMessage(historyDb, msg).catch(() => {});
+  }
+
+  function refreshMine() {
+    messages = messages.map((m) => (m.kind === 'chat' ? { ...m, mine: m.username === me } : m));
+  }
+
+  function autoJoin() {
+    // Returning user? Rejoin silently with the remembered name.
+    // If it is taken now, the server errors and we fall back to the popup.
+    const saved = getStoredUsername();
+    if (saved && validUsername(saved)) ws.send(JSON.stringify({ type: 'join', username: saved }));
+    else askName();
+  }
+
+  async function clearLocal() {
+    if (historyDb) await clearHistory(historyDb).catch(() => {});
+    messages = [];
+  }
+
+  async function init() {
+    try {
+      historyDb = await openHistoryDB();
+      const saved = await loadHistory(historyDb);
+      if (saved.length) {
+        messages = saved;
+        messages = [
+          ...messages,
+          { kind: 'system', text: `Restored ${saved.length} messages from this browser` }
+        ];
+        scrollDown();
+      }
+    } catch {
+      historyDb = null; // e.g. private mode: chat works, history just won't persist
+    }
+    connect();
+  }
+
+  onMount(init);
 </script>
 
 <main class="card">
@@ -92,7 +144,7 @@
   </header>
 
   {#if me}
-    <div class="me-bar">You are <b>{me}</b> · {users.join(', ')}</div>
+    <div class="me-bar">You are <b>{me}</b> · {users.join(', ')} <button class="link" on:click={clearLocal}>clear history</button></div>
   {/if}
 
   <div class="messages" bind:this={box}>
@@ -110,7 +162,7 @@
         </div>
       {/if}
     {:else}
-      <div class="empty">No messages yet — say hi! 👋<br /><small>Messages are relayed only, never stored.</small></div>
+      <div class="empty">No messages yet — say hi! 👋<br /><small>Relayed only — history lives in this browser, never on the server.</small></div>
     {/each}
   </div>
 
@@ -167,5 +219,6 @@
   input:focus { border-color: #764ba2; }
   button { border: none; border-radius: 999px; padding: 0 24px; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #667eea, #764ba2); cursor: pointer; }
   button:disabled { opacity: .4; cursor: default; }
+  .link { background: none; border: none; color: #5b5bd6; text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0 0 0 8px; }
   :global(.swal-glass) { border-radius: 20px !important; }
 </style>

@@ -18,6 +18,20 @@ npm run build && npm start  # production on :3000
 2. Client sends `{type:'join'}`. Server rejects duplicates with `{type:'error'}` → popup re-asks.
 3. Chat sends `{type:'chat'}` → server broadcasts to all. No history kept; `users` + `system` events keep presence.
 
+## Continuing a conversation (browser storage)
+
+The server still stores nothing. Your browser keeps what is needed to pick up
+where you left off:
+
+| What | Where | Why there |
+|---|---|---|
+| Username | `localStorage` (`posronda.username`) | tiny + synchronous — rejoin happens silently on return; if the name is taken now, the popup asks again |
+| Last 200 messages | `IndexedDB` (`posronda` → `messages`) | async + larger quota — restored on load with a "Restored N messages" note; oldest pruned past 200 |
+| Online users | nowhere | presence is live — a stored list would be stale |
+
+Use **clear history** next to your name to wipe this browser's copy (your
+username is kept). Private mode etc.: chat still works, history just won't persist.
+
 ## Develop with prompts (opencode skills)
 
 This repo ships AI skills so you can drive development by prompt:
