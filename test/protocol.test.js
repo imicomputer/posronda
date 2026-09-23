@@ -2,7 +2,7 @@
 // Run: npm test
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { validUsername, normalizeName, isTaken, sanitizeChat } from '../lib/protocol.js';
+import { validUsername, normalizeName, isTaken, sanitizeChat, isTypingMessage } from '../lib/protocol.js';
 
 describe('validUsername', () => {
   it('accepts normal names', () => {
@@ -49,5 +49,23 @@ describe('sanitizeChat', () => {
   });
   it('caps messages at 500 chars', () => {
     assert.equal(sanitizeChat('x'.repeat(600)).length, 500);
+  });
+});
+
+describe('isTypingMessage', () => {
+  it('accepts boolean typing flags', () => {
+    assert.equal(isTypingMessage({ type: 'typing', typing: true }), true);
+    assert.equal(isTypingMessage({ type: 'typing', typing: false }), true);
+  });
+  it('rejects non-boolean / missing typing flags', () => {
+    assert.equal(isTypingMessage({ type: 'typing' }), false);
+    assert.equal(isTypingMessage({ type: 'typing', typing: 'yes' }), false);
+    assert.equal(isTypingMessage({ type: 'typing', typing: 1 }), false);
+    assert.equal(isTypingMessage({ type: 'typing', typing: null }), false);
+  });
+  it('rejects wrong type / missing payload', () => {
+    assert.equal(isTypingMessage({ type: 'chat', typing: true }), false);
+    assert.equal(isTypingMessage(null), false);
+    assert.equal(isTypingMessage(undefined), false);
   });
 });

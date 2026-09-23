@@ -154,4 +154,46 @@ describe('relay server', () => {
     assert.ok(!users.users.includes('gina'));
     a.close();
   });
+
+  it('relays typing start/stop to everyone', async () => {
+    const a = await connect();
+    const na = listen(a);
+    a.send(JSON.stringify({ type: 'join', username: 'tina' }));
+    await na(); await skip(na, 2);
+    const b = await connect();
+    const nb = listen(b);
+    b.send(JSON.stringify({ type: 'join', username: 'uma' }));
+    await nb(); await skip(nb, 2);
+    await skip(na, 2);
+
+    a.send(JSON.stringify({ type: 'typing', typing: true }));
+    const start = await nb();
+    assert.equal(start.type, 'typing');
+    assert.equal(start.username, 'tina');
+    assert.equal(start.typing, true);
+    assert.ok(typeof start.time === 'number');
+
+    a.send(JSON.stringify({ type: 'typing', typing: false }));
+    const stop = await nb();
+    assert.equal(stop.type, 'typing');
+    assert.equal(stop.username, 'tina');
+    assert.equal(stop.typing, false);
+    a.close(); b.close();
+  });
+
+  it('rejects typing before join and ignores non-boolean flags', async () => {
+    const ws = await connect();
+    const next = listen(ws);
+    ws.send(JSON.stringify({ type: 'typing', typing: true }));
+    assert.equal((await next()).type, 'error');
+    ws.send(JSON.stringify({ type: 'join', username: 'victor' }));
+    await next(); await skip(next, 2);
+    ws.send(JSON.stringify({ type: 'typing', typing: 'yes' }));
+    const winner = await Promise.race([
+      next().then((m) => m.type),
+      new Promise((r) => setTimeout(() => r('silence'), 400))
+    ]);
+    assert.equal(winner, 'silence');
+    ws.close();
+  });
 });

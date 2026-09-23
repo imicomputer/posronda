@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import Swal from 'sweetalert2';
   import { validUsername, sanitizeChat } from '../lib/protocol.js';
-  import { colorOf, fmtTime as time } from './lib/ui.js';
+  import { colorOf, fmtTime as time, typingText, pruneTyping } from './lib/ui.js';
   import {
     getStoredUsername, setStoredUsername,
     openHistoryDB, loadHistory, saveMessage, clearHistory
@@ -16,6 +16,11 @@
   let draft = '';
   let box; // scroll container
   let historyDb = null; // IndexedDB handle; null when storage unavailable
+  let typing = {}; // username -> timestamp (in-memory only, never persisted)
+  let lastTypingSent = 0;
+  let stopTypingTimer;
+
+  $: typingLine = typingText(Object.keys(typing).filter((n) => n !== me));
 
   const wsUrl = () =>
     `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
@@ -50,6 +55,18 @@
         messages = [...messages, msg];
         persist(msg);
         scrollDown();
+        if (m.username && m.username !== me && typing[m.username]) {
+          const { [m.username]: _dropped, ...rest } = typing;
+          typing = rest;
+        }
+      } else if (m.type === 'typing') {
+        if (m.username && m.username !== me) {
+          if (m.typing) typing = { ...typing, [m.username]: m.time || Date.now() };
+          else {
+            const { [m.username]: _dropped, ...rest } = typing;
+            typing = rest;
+          }
+        }
       } else if (m.type === 'system') {
         const msg = { kind: 'system', text: m.text };
         messages = [...messages, msg];
@@ -82,6 +99,37 @@
     if (!text || !ws || ws.readyState !== 1 || !me) return;
     ws.send(JSON.stringify({ type: 'chat', text }));
     draft = '';
+    sendTyping(false);
+    lastTypingSent = 0;
+  }
+
+  // --- Typing indicator (ephemeral, never persisted) ---
+
+  function sendTyping(value) {
+    if (!ws || ws.readyState !== 1 || !me) return;
+    ws.send(JSON.stringify({ type: 'typing', typing: value }));
+  }
+
+  function handleInput() {
+    if (!me) return;
+    if (draft.trim()) {
+      const now = Date.now();
+      if (now - lastTypingSent > 2000) {
+        sendTyping(true);
+        lastTypingSent = now;
+      }
+      clearTimeout(stopTypingTimer);
+      stopTypingTimer = setTimeout(() => sendTyping(false), 3000);
+    } else {
+      clearTimeout(stopTypingTimer);
+      sendTyping(false);
+      lastTypingSent = 0;
+    }
+  }
+
+  function pruneTick() {
+    const pruned = pruneTyping(typing);
+    if (Object.keys(pruned).length !== Object.keys(typing).length) typing = pruned;
   }
 
   // --- Local persistence (server stores nothing) ---
@@ -122,6 +170,7 @@
     } catch {
       historyDb = null; // e.g. private mode: chat works, history just won't persist
     }
+    setInterval(pruneTick, 2000);
     connect();
   }
 
@@ -166,10 +215,15 @@
     {/each}
   </div>
 
+  {#if typingLine}
+    <div class="typing">{typingLine}</div>
+  {/if}
   <form class="composer" on:submit|preventDefault={send}>
     <input
       placeholder={me ? `Message as ${me}…` : 'Joining…'}
       bind:value={draft}
+      on:input={handleInput}
+      on:blur={() => sendTyping(false)}
       maxlength="500"
       disabled={!me}
       autocomplete="off"
@@ -215,6 +269,7 @@
   .text { word-break: break-word; font-size: 15px; }
   .when { font-size: 10px; opacity: .6; text-align: right; margin-top: 4px; }
   .composer { display: flex; gap: 10px; padding: 14px; background: #fff; border-top: 1px solid #eee; }
+  .typing { padding: 6px 20px 0; font-size: 12px; color: #777; background: #fff; font-style: italic; }
   input { flex: 1; border: 2px solid #e5e0ff; border-radius: 999px; padding: 12px 18px; font-size: 15px; outline: none; }
   input:focus { border-color: #764ba2; }
   button { border: none; border-radius: 999px; padding: 0 24px; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #667eea, #764ba2); cursor: pointer; }

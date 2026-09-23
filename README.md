@@ -32,6 +32,13 @@ where you left off:
 Use **clear history** next to your name to wipe this browser's copy (your
 username is kept). Private mode etc.: chat still works, history just won't persist.
 
+## Typing indicator
+
+Start typing and others see `Alice is typing…` above the composer (two names
+shown, `Several people are typing…` for 3+). State is ephemeral presence —
+relayed over WS as `{type:'typing'}`, never stored on the server or in the
+browser, and auto-clears after ~5s. See `docs/features/typing-indicator.md`.
+
 ## Develop with prompts (opencode skills)
 
 This repo ships AI skills so you can drive development by prompt:

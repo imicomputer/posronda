@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { validUsername, normalizeName, isTaken, sanitizeChat } from './lib/protocol.js';
+import { validUsername, normalizeName, isTaken, sanitizeChat, isTypingMessage } from './lib/protocol.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, 'dist');
@@ -99,6 +99,18 @@ wss.on('connection', (ws) => {
       const text = sanitizeChat(data.text);
       if (!text) return;
       broadcast({ type: 'chat', username, text, time: Date.now() });
+      return;
+    }
+
+    // 3) Typing: ephemeral presence, relay only, never stored
+    if (data.type === 'typing') {
+      const username = clients.get(ws);
+      if (!username) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Join first.' }));
+        return;
+      }
+      if (!isTypingMessage(data)) return; // malformed flags ignored, no error
+      broadcast({ type: 'typing', username, typing: data.typing, time: Date.now() });
       return;
     }
   });
