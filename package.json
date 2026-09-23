@@ -1,0 +1,25 @@
+{
+  "name": "wsdemo-chat",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Simple single-room WebSocket chat (no message storage, relay only) with Svelte UI. Coolify-ready.",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"node server.js\"",
+    "dev:client": "vite",
+    "dev:server": "node server.js",
+    "build": "vite build",
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "sweetalert2": "^11.14.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "concurrently": "^9.1.0",
+    "svelte": "^5.7.0",
+    "vite": "^6.0.3"
+  }
+}
