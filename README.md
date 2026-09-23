@@ -29,8 +29,10 @@ where you left off:
 | Last 200 messages | `IndexedDB` (`posronda` → `messages`) | async + larger quota — restored on load with a "Restored N messages" note; oldest pruned past 200 |
 | Online users | nowhere | presence is live — a stored list would be stale |
 
-Use **clear history** next to your name to wipe this browser's copy (your
-username is kept). Private mode etc.: chat still works, history just won't persist.
+Use the ☰ menu next to your name: **clear history** wipes this browser's
+message copy (username is kept), **log out** erases username + history,
+leaves the room, and shows the join popup again. Private mode etc.: chat
+still works, history just won't persist. See `docs/features/logout-menu.md`.
 
 ## Typing indicator
 

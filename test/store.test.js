@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
   USERNAME_KEY, HISTORY_MAX,
   getStoredUsername, setStoredUsername, clearStoredUsername,
-  openHistoryDB, loadHistory, saveMessage, clearHistory
+  openHistoryDB, loadHistory, saveMessage, clearHistory, wipeLocalData
 } from '../src/lib/store.js';
 
 // --- Fakes ---------------------------------------------------------------
@@ -181,5 +181,24 @@ describe('message history', () => {
     assert.deepEqual(await loadHistory(db), []);
     await saveMessage(db, chat('alice', 'again'));
     assert.equal((await loadHistory(db)).length, 1);
+  });
+});
+
+describe('wipeLocalData', () => {
+  it('erases the username and all stored messages', async () => {
+    const ls = fakeStorage();
+    const db = await openHistoryDB(fakeIndexedDB());
+    setStoredUsername('alice', ls);
+    await saveMessage(db, chat('alice', 'hi'));
+    await saveMessage(db, sys('bob joined'));
+    await wipeLocalData(ls, db);
+    assert.equal(getStoredUsername(ls), '');
+    assert.deepEqual(await loadHistory(db), []);
+  });
+  it('still clears the username when the history DB is unavailable', async () => {
+    const ls = fakeStorage();
+    setStoredUsername('alice', ls);
+    await wipeLocalData(ls, null);
+    assert.equal(getStoredUsername(ls), '');
   });
 });

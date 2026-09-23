@@ -5,7 +5,7 @@
   import { colorOf, fmtTime as time, typingText, pruneTyping } from './lib/ui.js';
   import {
     getStoredUsername, setStoredUsername,
-    openHistoryDB, loadHistory, saveMessage, clearHistory
+    openHistoryDB, loadHistory, saveMessage, clearHistory, wipeLocalData
   } from './lib/store.js';
 
   let ws;
@@ -19,6 +19,9 @@
   let typing = {}; // username -> timestamp (in-memory only, never persisted)
   let lastTypingSent = 0;
   let stopTypingTimer;
+  let menuOpen = false;
+  let connGen = 0; // invalidates stale socket handlers (logout starts fresh)
+  let reconnectTimer;
 
   $: typingLine = typingText(Object.keys(typing).filter((n) => n !== me));
 
@@ -33,13 +36,16 @@
   function connect() {
     // In `npm run dev`, frontend is on :5173 and WS is proxied; fallback for safety:
     const url = location.port === '5173' ? 'ws://localhost:3000/ws' : wsUrl();
+    const gen = ++connGen;
     ws = new WebSocket(url);
 
     ws.onopen = () => { connected = true; autoJoin(); };
     ws.onclose = () => {
+      if (gen !== connGen) return; // superseded (e.g. logout opened a newer socket)
       connected = false;
       messages = [...messages, { kind: 'system', text: 'Disconnected — retrying…' }];
-      setTimeout(connect, 2000);
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 2000);
     };
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
@@ -155,6 +161,35 @@
     messages = [];
   }
 
+  // --- Log out: erase username + history, free the name, start over ---
+
+  async function logout() {
+    menuOpen = false;
+    if (!me) return;
+    const { isConfirmed } = await Swal.fire({
+      title: 'Log out?',
+      text: 'This erases your username and all chat history on this device.',
+      showCancelButton: true,
+      confirmButtonText: 'Log out',
+      cancelButtonText: 'Stay',
+      customClass: { popup: 'swal-glass' }
+    });
+    if (!isConfirmed) return;
+    sendTyping(false); // best-effort: clear our indicator for others
+    clearTimeout(stopTypingTimer);
+    clearTimeout(reconnectTimer); // no stale auto-reconnect after we go fresh
+    connGen++; // invalidate the old socket's handlers before dropping it
+    try { ws?.close(); } catch { /* already closed */ }
+    await wipeLocalData(undefined, historyDb).catch(() => {});
+    me = '';
+    users = [];
+    messages = [];
+    draft = '';
+    typing = {};
+    lastTypingSent = 0;
+    connect(); // fresh socket → no remembered name → join popup
+  }
+
   async function init() {
     try {
       historyDb = await openHistoryDB();
@@ -193,7 +228,18 @@
   </header>
 
   {#if me}
-    <div class="me-bar">You are <b>{me}</b> · {users.join(', ')} <button class="link" on:click={clearLocal}>clear history</button></div>
+    <div class="me-bar">
+      <span class="me-name">You are <b>{me}</b> · {users.join(', ')}</span>
+      <div class="menu">
+        <button class="link" on:click={() => (menuOpen = !menuOpen)}>☰</button>
+        {#if menuOpen}
+          <div class="menu-items">
+            <button class="menu-item" on:click={() => { menuOpen = false; clearLocal(); }}>Clear history</button>
+            <button class="menu-item danger" on:click={logout}>Log out</button>
+          </div>
+        {/if}
+      </div>
+    </div>
   {/if}
 
   <div class="messages" bind:this={box}>
@@ -256,7 +302,13 @@
   .presence { background: rgba(255,255,255,.2); padding: 6px 12px; border-radius: 999px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: #ffb3b3; }
   .dot.on { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
-  .me-bar { padding: 8px 20px; font-size: 13px; background: #f3f0ff; color: #5b5bd6; border-bottom: 1px solid #e9e4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .me-bar { padding: 8px 20px; font-size: 13px; background: #f3f0ff; color: #5b5bd6; border-bottom: 1px solid #e9e4ff; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .me-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .menu { position: relative; flex-shrink: 0; }
+  .menu-items { position: absolute; right: 0; top: 100%; background: #fff; border: 1px solid #e9e4ff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; min-width: 140px; z-index: 10; padding: 4px; }
+  .menu-item { background: none; border: none; text-align: left; padding: 8px 14px; font-size: 13px; color: #5b5bd6; cursor: pointer; border-radius: 8px; }
+  .menu-item:hover { background: #f3f0ff; }
+  .menu-item.danger { color: #dc2626; }
   .messages { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 10px; background: #fafaff; }
   .empty { text-align: center; color: #888; margin: auto; line-height: 1.6; }
   .system { align-self: center; font-size: 12px; color: #777; background: #eeeefc; padding: 4px 14px; border-radius: 999px; }
