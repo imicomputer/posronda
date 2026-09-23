@@ -1,4 +1,4 @@
-# AGENTS.md — relay-chat repo conventions
+# AGENTS.md — PosRonda repo conventions
 
 Simple single-room WebSocket chat. Svelte UI + Node `ws` relay. Keep it simple.
 

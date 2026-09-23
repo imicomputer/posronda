@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of the relay-chat app. Use when the user says "release", "ship", "cut a version", "deploy to production", or names a version like "v1.1.0". Creates the release branch, verifies everything, merges, tags, and confirms the Coolify deploy.
+description: Cut a release of the PosRonda chat app. Use when the user says "release", "ship", "cut a version", "deploy to production", or names a version like "v1.1.0". Creates the release branch, verifies everything, merges, tags, and confirms the Coolify deploy.
 ---
 
 # Release — verify → branch → merge → tag → deploy
@@ -34,10 +34,10 @@ gh pr create --title "chore(release): vX.Y.Z" --body "Release candidate. Verifie
 
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z" && git push origin vX.Y.Z
-docker build -t relay-chat:vX.Y.Z .
-docker run -d --name relay-smoke -p 3139:3000 relay-chat:vX.Y.Z
+docker build -t posronda:vX.Y.Z .
+docker run -d --name posronda-smoke -p 3139:3000 posronda:vX.Y.Z
 curl -s -o /dev/null -w "smoke: %{http_code}\n" http://localhost:3139/
-docker rm -f relay-smoke
+docker rm -f posronda-smoke
 ```
 
 ## 4. User testing + deploy gate

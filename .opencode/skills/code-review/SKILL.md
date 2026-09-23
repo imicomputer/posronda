@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review a pull request in the relay-chat repo. Use when the user says "review", "check the PR", "is this ready to merge", or after feature-dev opens a PR. Reads the diff, runs tests, and posts an approve or request-changes review.
+description: Review a pull request in the PosRonda chat repo. Use when the user says "review", "check the PR", "is this ready to merge", or after feature-dev opens a PR. Reads the diff, runs tests, and posts an approve or request-changes review.
 ---
 
 # Code Review — diff → verify → verdict

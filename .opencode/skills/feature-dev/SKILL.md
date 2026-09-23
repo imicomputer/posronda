@@ -1,6 +1,6 @@
 ---
 name: feature-dev
-description: Develop a new feature end-to-end in the relay-chat repo. Use when the user asks to add a feature, change behavior, fix a bug, or says "implement", "build", "add". Covers analyze, design, branch, code, test, commit, push, and pull request.
+description: Develop a new feature end-to-end in the PosRonda chat repo. Use when the user asks to add a feature, change behavior, fix a bug, or says "implement", "build", "add". Covers analyze, design, branch, code, test, commit, push, and pull request.
 ---
 
 # Feature Dev — analyze → design → code → test → PR

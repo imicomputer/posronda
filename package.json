@@ -1,9 +1,9 @@
 {
-  "name": "wsdemo-chat",
+  "name": "posronda",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Simple single-room WebSocket chat (no message storage, relay only) with Svelte UI. Coolify-ready.",
+  "description": "PosRonda — simple single-room WebSocket chat (no message storage, relay only) with Svelte UI. Coolify-ready.",
   "scripts": {
     "dev": "concurrently \"vite\" \"node server.js\"",
     "dev:client": "vite",

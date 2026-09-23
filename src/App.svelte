@@ -52,7 +52,7 @@
 
   async function askName(error = '') {
     const { value } = await Swal.fire({
-      title: 'Welcome to Relay Chat',
+      title: 'Welcome to PosRonda',
       text: error || 'Pick a username to join the room',
       input: 'text',
       inputPlaceholder: 'e.g. svelte_fan',
@@ -81,7 +81,7 @@
     <div class="brand">
       <span class="logo">💬</span>
       <div>
-        <h1>Relay Chat</h1>
+        <h1>PosRonda</h1>
         <p>one room · no history · {connected ? 'live' : 'connecting…'}</p>
       </div>
     </div>

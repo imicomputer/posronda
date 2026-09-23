@@ -1,4 +1,4 @@
-# Relay Chat — single room, no storage
+# PosRonda — single room, no storage
 
 Simple WebSocket chat: Svelte UI + Node `ws` relay. Messages are forwarded to everyone in the room and never stored.
 

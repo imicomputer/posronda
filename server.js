@@ -113,4 +113,4 @@ wss.on('connection', (ws) => {
   });
 });
 
-server.listen(PORT, () => console.log(`Relay chat on :${PORT} (WS /ws)`));
+server.listen(PORT, () => console.log(`PosRonda on :${PORT} (WS /ws)`));
