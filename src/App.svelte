@@ -217,7 +217,7 @@
     <div class="brand">
       <span class="logo">💬</span>
       <div>
-        <h1>PosRonda</h1>
+        <h1>PosRonda v0.3 imironda</h1>
         <p>one room · no history · {connected ? 'live' : 'connecting…'}</p>
       </div>
     </div>
