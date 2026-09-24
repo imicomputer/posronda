@@ -69,3 +69,6 @@ npm test   # unit (lib/protocol, src/lib/ui, src/lib/store) + live relay integra
 4. Deploy — the single container serves both UI (`/`) and WebSocket (`/ws`), no extra config.
 
 Files: `server.js` (relay + static), `src/App.svelte` (UI), `lib/protocol.js` + `src/lib/` (shared helpers), `docs/features/` (per-feature specs), `Dockerfile` (build + serve).
+
+### Forked
+2026-09-24
